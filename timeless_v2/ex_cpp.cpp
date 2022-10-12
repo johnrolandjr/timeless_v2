@@ -2,39 +2,53 @@
 #include "ex_cpp.hh"
 #include "pins.hh"
 
-bool bStarted = false;
-int showtime_count_g;
-uint32_t backup_sw_cnt_g;
-
-void my_delay_ms(uint32_t ms)
+void init_pwm_pin(uint32_t pwm_pin)
 {
-  float tmp = 1.024; // actual time 1.024 ms / tick
-  float f_ticks = ms / tmp;
-  uint16_t i_ticks;
-
-  if (f_ticks > 0xFFFF)
+  switch (pwm_pin)
   {
-    i_ticks = 0xFFFF;
+    case ADA_TRINK_OC0B: // PWM Magnet Pin -> Timer 0 Output Compare B
+      // Set Compare Output Mode - Fast PWM Mode -> 2 (Non Inverting Compare Match)
+      TCCR0A = (0x02 << 4);
+      
+      // WGM set to FastPWM(=7) (updated at OCRA)
+      TCCR0A |= (0x03); // bits[1:0] of wgm
+      TCCR0B =  (0x08); // bit[2] of wgm
+      //TCCR2A = 0x3;
+      //TCCR2B = 0x08;
+
+      // MAG PWM Duty 50% with Period set to 80Hz
+      // MAG PWM frequency/period will not change, setting here.
+      // 95 -> (95 + implicit 1) -> count of 96 -> 8MHz / 1024 prescaler / 96 counts = 81.4Hz
+      uint8_t period = BASE_MAG_PERIOD;
+      OCR0A = period; // Period
+      OCR0B = ((period+1) >> 1);
+      break;
+    case ADA_TRINK_OC1B:
+      break;
+    default:
+      // Invalid/Unexpected Pin initialized!
+      return;
   }
-  else
-  {
-    i_ticks = (uint16_t)f_ticks;
-  }
-  
-  // Timer 1 is stopped by default
-  // Reset timer count = 0
-  TCNT1 = 0;
 
-  // Start timer 1
-  TCCR1B = 5;
-
-  // Wait until low byte is greater than requested number of ms
-  while(TCNT1 < ms){};
-
-  // Stop timer 1
-  TCCR1B = 0;
+  // Initialize pwm pin as digital output
+  pinMode(pwm_pin, OUTPUT);
 }
 
+void start_pwms(void)
+{
+  uint8_t led_period;
+  uint8_t led_on_period;
+
+  //calculate_led_pwm(&led_period, &led_on_period);
+  //update_led_pwm(led_period, led_on_period);
+
+  // Start PWMs by setting the clock
+  // Set Clock Prescaler for Timer0 (CLKio / 1024 =5)
+  TCCR0B |= 0x05;
+  //TCCR2B |= _BV(CS22);
+}
+
+/*
 int make_linear(int pot_val)
 {
   int out;
@@ -131,38 +145,6 @@ void stop_pwm(void)
   TCCR2A &= ~_BV(FOC2B);
 }
 
-void start_pwm(void)
-{
-  uint8_t led_period;
-  uint8_t led_on_period;
-  uint8_t mag_period = BASE_LED_PERIOD;
-
-  calculate_led_pwm(&led_period, &led_on_period);
-
-  update_led_pwm(led_period, led_on_period);
-
-  // Set Magnet PWM duty cycle to 50%
-  OCR2A = mag_period-1; // period
-  OCR2B = (mag_period >> 1); // duty
-
-  // Set PWM Mode to FastPWM
-  // Initializing LED but OC0n disconnected
-  TCCR0A |= _BV(WGM01) | _BV(WGM00);
-  TCCR0B |= _BV(WGM02);
-  
-  // Initializing PWM but OC2n disconnected
-  TCCR2A |= _BV(WGM21) | _BV(WGM20);
-  TCCR2B |= _BV(WGM22);
-  
-  // Set Compare Output Mode to be non inverting mode
-  TCCR0A |= _BV(COM0B1);
-  TCCR2A |= _BV(COM2B1);
-
-  // Start PWMs by setting the clock
-  TCCR0B |= _BV(CS01) | _BV(CS00);
-  TCCR2B |= _BV(CS22);
-}
-
 void update_led(void)
 {
   uint8_t led_period;
@@ -198,10 +180,4 @@ void calculate_led_pwm(uint8_t * p_period, uint8_t * p_on_period)
   *p_period = (period - period_delta);
   *p_on_period = map(led_duty, 0, 255, 0, *p_period);
 }
-
-void update_led_pwm(uint8_t period2, uint8_t on_period2)
-{
-  // Set LED PWM according to this moment's voltage reading on the potentiometer
-  OCR0A = period2; // period
-  OCR0B = on_period2; // duty
-}
+*/
