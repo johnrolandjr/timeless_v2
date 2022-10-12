@@ -12,9 +12,7 @@ void init_pwm_pin(uint32_t pwm_pin)
       
       // WGM set to FastPWM(=7) (updated at OCRA)
       TCCR0A |= (0x03); // bits[1:0] of wgm
-      TCCR0B =  (0x08); // bit[2] of wgm
-      //TCCR2A = 0x3;
-      //TCCR2B = 0x08;
+      TCCR0B  = (0x08); // bit[2] of wgm
 
       // MAG PWM Duty 50% with Period set to 80Hz
       // MAG PWM frequency/period will not change, setting here.
@@ -23,7 +21,12 @@ void init_pwm_pin(uint32_t pwm_pin)
       OCR0A = period; // Period
       OCR0B = ((period+1) >> 1);
       break;
-    case ADA_TRINK_OC1B:
+    case ADA_TRINK_OC1B: // PWM LED Pin -> Timer 1 Output Compare B
+      // Set Compare Output Mode - Fast PWM Mode -> 2 (Non Inverting Compare Match)
+      GTCCR = 0x20;// Set PWM1B = PWM B Enable
+
+      // PWM mode is different on Timer 1. Match Event OCR1B and Counter Reset when matched with OCR1C
+      // Not setting the period or duty as it will change
       break;
     default:
       // Invalid/Unexpected Pin initialized!
@@ -36,18 +39,53 @@ void init_pwm_pin(uint32_t pwm_pin)
 
 void start_pwms(void)
 {
-  uint8_t led_period;
-  uint8_t led_on_period;
-
-  //calculate_led_pwm(&led_period, &led_on_period);
-  //update_led_pwm(led_period, led_on_period);
+  //Update led pwm and duty
+  update_led();
 
   // Start PWMs by setting the clock
   // Set Clock Prescaler for Timer0 (CLKio / 1024 =5)
   TCCR0B |= 0x05;
-  //TCCR2B |= _BV(CS22);
+  // Set Clock Prescaler for Timer1 (CLKio / 1024 =0xB)
+  // Set Clock Prescaler for Timer1 (CLKio / 1024 =0xB)
+  TCCR1 = _BV(CS13) | _BV(CS11) | _BV(CS10);
+  GTCCR = _BV(COM1B1) | _BV(PWM1B);  //  Noninverting + Enable PWM on OCR1B
+}
+void update_led(void)
+{
+  uint8_t led_period;
+  uint8_t led_on_period;
+
+  calculate_led_pwm(&led_period, &led_on_period);
+  
+  // Update Led Period and Duty
+  OCR1C = led_period;
+  OCR1B = led_on_period;
 }
 
+void calculate_led_pwm(uint8_t * p_period, uint8_t * p_on_period)
+{
+  uint8_t period;
+  uint8_t period_delta;
+  uint8_t period_shift_duty;
+  
+  // CLKsys (8Mhz) prescaled(1024) = 7812 Hz --> Range of (31Hz - 7812Hz) (~0.3Hz / tick)
+  period = BASE_LED_PERIOD;
+
+  /*
+  // Calculate both duty values (0x00 - 0xFF)
+  int delta_pot_val = analogRead(DELTA_POT_PIN);
+  period_shift_duty = get_delta(delta_pot_val); // (~0.3Hz / tick)
+  int brightness_pot_val = analogRead(BRIGHTNESS_POT_PIN);
+  uint8_t led_duty = get_delta(brightness_pot_val);
+
+  // Update the frequencies prior to turning them on
+  period_delta = map(period_shift_duty, 0, 0xFF, 0, 60);
+  *p_period = (period - period_delta);
+  *p_on_period = map(led_duty, 0, 255, 0, *p_period);
+  */
+  *p_period = period;
+  *p_on_period = ((period+1) >> 1);
+}
 /*
 int make_linear(int pot_val)
 {
@@ -110,74 +148,5 @@ uint8_t get_delta(int pot_val)
     ret = 0xFE;
   }
   return ret;
-}
-
-void stop_pwm(void)
-{
-  // Stop the clocks
-  TCCR0B &= ~(7);
-  TCCR2B &= ~(7);
-
-  // Reset Output Compare Value via Force
-  // Force is only active when WGM bits are on a non PWM mode
-  // Set to Waveform Generator Mode = normal mode = 0
-  TCCR0A &= ~(_BV(WGM01) | _BV(WGM00)); 
-  TCCR0B &= ~_BV(WGM02);
-  // Reset Count
-  TCNT0 = 0;
-  // Set Compare Output Mode to normal mode
-  TCCR0A &= ~(_BV(COM0B1) | _BV(COM0B0));
-  // Force the Compare Output (since timer is not running and it's reset to 0), it should be forced low)
-  TCCR0A |= _BV(FOC0B);
-  TCCR0A &= ~_BV(FOC0B);
-  
-  // Reset Output Compare Value via Force
-  // Force is only active when WGM bits are on a non PWM mode
-  // Set to Waveform Generator Mode = normal mode = 0
-  TCCR2A &= ~(_BV(WGM21) | _BV(WGM20)); 
-  TCCR2B &= ~_BV(WGM22);
-  // Reset Count
-  TCNT2 = 0;
-  // Set Compare Output Mode to non inverting
-  TCCR2A &= ~(_BV(COM2B1) | _BV(COM2B0));
-  // Force the Compare Output (since timer is not running and it's reset to 0), it should be forced low)
-  TCCR2A |= _BV(FOC2B);
-  TCCR2A &= ~_BV(FOC2B);
-}
-
-void update_led(void)
-{
-  uint8_t led_period;
-  uint8_t led_on_period;
-
-  calculate_led_pwm(&led_period, &led_on_period);
-
-  // To avoid a flickering, wait until timer is 0
-  while(TCNT0 != 0){};
-  
-  update_led_pwm(led_period, led_on_period);
-}
-
-void calculate_led_pwm(uint8_t * p_period, uint8_t * p_on_period)
-{
-  uint8_t period;
-  uint8_t period_delta;
-  uint8_t period_shift_duty;
-  
-  // In the future, we may read an analog voltage and change the delta periods between magnet and led.
-  // CLKsys (16Mhz) prescaled(16) = 1MHz. CLKio (1MHz) prescaled(64) = 15625 Hz --> Range of (61Hz - 15625Hz) (~0.3Hz / tick)
-  // (15625 Hz) / (desired frequency) = ticks for desired frequency
-  period = BASE_LED_PERIOD;
-
-  // Calculate both duty values (0x00 - 0xFF)
-  int delta_pot_val = analogRead(DELTA_POT_PIN);
-  period_shift_duty = get_delta(delta_pot_val); // (~0.3Hz / tick)
-  int brightness_pot_val = analogRead(BRIGHTNESS_POT_PIN);
-  uint8_t led_duty = get_delta(brightness_pot_val);
-
-  // Update the frequencies prior to turning them on
-  period_delta = map(period_shift_duty, 0, 0xFF, 0, 60);
-  *p_period = (period - period_delta);
-  *p_on_period = map(led_duty, 0, 255, 0, *p_period);
 }
 */
