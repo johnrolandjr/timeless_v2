@@ -24,8 +24,6 @@ void init_pwm_pin(uint32_t pwm_pin);
 void start_pwms(void);
 void update_led(void);
 void calculate_led_pwm(uint8_t * p_period, uint8_t * p_on_period);
-/*
-int make_linear(int pot_val);
 uint8_t get_delta(int pot_val);
-*/
+int make_linear(int pot_val);
 #endif // EX_CPP_H

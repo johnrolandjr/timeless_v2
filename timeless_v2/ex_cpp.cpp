@@ -71,7 +71,6 @@ void calculate_led_pwm(uint8_t * p_period, uint8_t * p_on_period)
   // CLKsys (8Mhz) prescaled(1024) = 7812 Hz --> Range of (31Hz - 7812Hz) (~0.3Hz / tick)
   period = BASE_LED_PERIOD;
 
-  /*
   // Calculate both duty values (0x00 - 0xFF)
   int delta_pot_val = analogRead(DELTA_POT_PIN);
   period_shift_duty = get_delta(delta_pot_val); // (~0.3Hz / tick)
@@ -80,38 +79,8 @@ void calculate_led_pwm(uint8_t * p_period, uint8_t * p_on_period)
 
   // Update the frequencies prior to turning them on
   period_delta = map(period_shift_duty, 0, 0xFF, 0, 60);
-  *p_period = (period - period_delta);
-  *p_on_period = map(led_duty, 0, 255, 0, *p_period);
-  */
-  *p_period = period;
-  *p_on_period = ((period+1) >> 1);
-}
-/*
-int make_linear(int pot_val)
-{
-  int out;
-  int frac = ANA_MAX_3V3_READ / 4;
-  if (pot_val < 0)
-  {
-    out = 0;
-  }
-  else if (pot_val < 50)
-  {
-    out = map(pot_val, 0, 50, 0, frac);
-  }
-  else if (pot_val < 117)
-  {
-    out = map(pot_val, 50, 117, frac, 2*frac);
-  }
-  else if (pot_val < 340)
-  {
-    out = map(pot_val, 117, 340, 2*frac, 3*frac);
-  }
-  else
-  {
-    out = map(pot_val, 340, ANA_MAX_3V3_READ, 3*frac, 4*frac);
-  }
-  return out;
+  *p_period = (period + period_delta);
+  *p_on_period = map(led_duty, 5, 255, 0, *p_period);
 }
 
 uint8_t get_delta(int pot_val)
@@ -149,4 +118,30 @@ uint8_t get_delta(int pot_val)
   }
   return ret;
 }
-*/
+
+int make_linear(int pot_val)
+{
+  int out;
+  int frac = ANA_MAX_3V3_READ / 4;
+  if (pot_val < 0)
+  {
+    out = 0;
+  }
+  else if (pot_val < 50)
+  {
+    out = map(pot_val, 0, 50, 0, frac);
+  }
+  else if (pot_val < 117)
+  {
+    out = map(pot_val, 50, 117, frac, 2*frac);
+  }
+  else if (pot_val < 340)
+  {
+    out = map(pot_val, 117, 340, 2*frac, 3*frac);
+  }
+  else
+  {
+    out = map(pot_val, 340, ANA_MAX_3V3_READ, 3*frac, 4*frac);
+  }
+  return out;
+}
