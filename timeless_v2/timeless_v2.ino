@@ -1,16 +1,21 @@
-#include "ex_cpp.hh"
+//
+// Filename: timeless_v2.cpp
+// Author: Beau Roland
+// Details: Application Source File
+//   Contains all the application source code.
+// Date: 7/31/22
+//
+
+#include "driver.hh"
 #include "pins.hh"
 
 // ---------------------------------------------------------------------------------------------------------------
 // Application prototypes
-bool magnet_detected(void);
-uint32_t duration_sw_held(void);
-bool showtime_expired(void);
-void start_animation(void);
-void stop_animation(void);
+// (none)
 
 // ---------------------------------------------------------------------------------------------------------------
 // Application functions
+// (none)
 
 // ---------------------------------------------------------------------------------------------------------------
 // Arduino Setup
@@ -24,5 +29,7 @@ void setup() {
 
 // Arduino Main Loop
 void loop() {
+  // Turn on PWMs (if not already on already)
+  // Update the LED PWM duty and period according to the voltages read from the potentiometers.
   start_pwms();
 }

@@ -1,5 +1,13 @@
+//
+// Filename: driver.cpp
+// Author: Beau Roland
+// Details: Driver C++ Source file
+//   Contains all the source code for the different functional blocks used in the application.
+// Date: 7/31/22
+//
+
 #include <Arduino.h>
-#include "ex_cpp.hh"
+#include "driver.hh"
 #include "pins.hh"
 
 void init_pwm_pin(uint32_t pwm_pin)

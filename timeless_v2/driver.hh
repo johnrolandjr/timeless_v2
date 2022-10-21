@@ -1,7 +1,8 @@
 //
-// Filename: ex_cpp.hh
+// Filename: driver.hh
 // Author: Beau Roland
-// Details: Example C++ Header file
+// Details: Driver C++ Header file
+//   Contains all the needed defines, externs, and function prototypes for the application
 // Date: 7/31/22
 //
 
