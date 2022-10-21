@@ -80,7 +80,7 @@ void calculate_led_pwm(uint8_t * p_period, uint8_t * p_on_period)
   // Update the frequencies prior to turning them on
   period_delta = map(period_shift_duty, 0, 0xFF, 0, 60);
   *p_period = (period + period_delta);
-  *p_on_period = map(led_duty, 5, 255, 0, *p_period);
+  *p_on_period = map(led_duty, 0, 255, 5, *p_period);
 }
 
 uint8_t get_delta(int pot_val)
