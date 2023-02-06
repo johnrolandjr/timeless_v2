@@ -98,10 +98,26 @@ uint8_t get_delta(int pot_val)
   uint8_t ret = 0;
 
   // Before we do anything, make the pot value more linear
-  ret = (uint8_t) make_linear(pot_val);
+  pot_val = make_linear(pot_val);
+  
+  if (pot_val < 0)
+  {
+    pot_val = 0;
+  }
+
+  if (pot_val >= ANA_MAX_3V3_READ)
+  {
+    ret = 0xFF;
+  }
+  else
+  {
+    delta = (uint32_t) pot_val;
+    delta = ((delta << 8) / ANA_MAX_3V3_READ);
+    ret = (uint8_t) delta;
+  }
   
   // get_delta should never return 0 or 255 as we always want some sort of PWM
-  if (ret <= 0)
+  if (ret == 0)
   {
     ret = 1;
   }
